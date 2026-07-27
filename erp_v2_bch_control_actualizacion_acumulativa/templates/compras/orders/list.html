@@ -1,0 +1,38 @@
+{% extends 'compras/base.html' %}
+{% block title %}Órdenes de compra{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>{{ 'Órdenes de Operaciones' if operations_only else 'Órdenes de compra' }}</h1><p>{{ 'OC operativas de tus obras asignadas.' if operations_only else 'Filtros acumulativos por obra, proveedor, estado y fechas.' }}</p></div>
+  {% if current_user.tiene_permiso('compras','crear') or current_user.tiene_permiso('oc_operaciones','crear') %}<a class="btn btn-primary" href="{{ url_for('compras.order_new') }}">Nueva OC</a>{% endif %}
+</div>
+
+<form class="card card-body mb-4 no-print">
+  <div class="row g-3 align-items-end">
+    <div class="col-md-3"><label class="form-label">Obra</label><select class="form-select" name="project_id"><option value="">Todas</option>{% for project in projects %}<option value="{{ project.id }}" {% if selected_project_id == project.id %}selected{% endif %}>{{ project.codigo }} · {{ project.nombre }}</option>{% endfor %}</select></div>
+    <div class="col-md-3"><label class="form-label">Proveedor</label><select class="form-select" name="supplier_id"><option value="">Todos</option>{% for supplier in suppliers %}<option value="{{ supplier.id }}" {% if selected_supplier_id == supplier.id %}selected{% endif %}>{{ supplier.codigo }} · {{ supplier.nombre }}</option>{% endfor %}</select></div>
+    {% if visible_order_types|length > 1 %}<div class="col-md-2"><label class="form-label">Tipo de OC</label><select class="form-select" name="tipo_oc"><option value="">Todos</option><option value="OPERACIONES" {% if selected_order_type == 'OPERACIONES' %}selected{% endif %}>Operaciones</option><option value="COMPRAS" {% if selected_order_type == 'COMPRAS' %}selected{% endif %}>Compras</option></select></div>{% endif %}
+    <div class="col-md-2"><label class="form-label">Estado</label><select class="form-select" name="estado"><option value="">Todos</option>{% for value in order_states %}<option value="{{ value }}" {% if selected_state == value %}selected{% endif %}>{{ value|replace('_',' ')|title }}</option>{% endfor %}</select></div>
+    <div class="col-md-2"><label class="form-label">Desde</label><input class="form-control" type="date" name="fecha_desde" value="{{ fecha_desde }}"></div>
+    <div class="col-md-2"><label class="form-label">Hasta</label><input class="form-control" type="date" name="fecha_hasta" value="{{ fecha_hasta }}"></div>
+    <div class="col-12 d-flex justify-content-end gap-2"><a class="btn btn-outline-secondary" href="{{ url_for('compras.orders_list') }}">Limpiar</a><button class="btn btn-outline-primary">Aplicar filtros</button></div>
+  </div>
+</form>
+
+<div class="card"><div class="table-responsive"><table class="table table-hover mb-0">
+  <thead><tr><th>Folio / tipo</th><th>Obra</th><th>Proveedor</th><th>Emisión / surtido</th><th>Modalidad</th><th class="text-end">Total s/IVA</th><th class="text-end">Pagado</th><th class="text-end">Saldo</th><th>Recepción</th><th>Estado</th><th></th></tr></thead>
+  <tbody>
+    {% for order in orders %}
+    <tr>
+      <td><strong>{{ order.folio }}</strong><br><span class="badge {{ 'text-bg-info' if order.tipo_oc == 'OPERACIONES' else 'text-bg-primary' }}">{{ order.tipo_oc|title }}</span><br><small>{% for req in order.requisitions %}{{ req.folio }}{% if not loop.last %}, {% endif %}{% endfor %}</small></td>
+      <td>{{ order.project.codigo }}</td><td>{{ order.supplier.nombre }}</td>
+      <td>{{ order.fecha_orden|date_es }}<br><small>{{ order.fecha_entrega_estimada|date_es }}</small></td>
+      <td>{{ order.modalidad_pago|title }}{% if order.modalidad_pago == 'CREDITO' and order.supplier.tiene_credito %}<br><small>{{ order.supplier.dias_credito }} días</small>{% endif %}</td>
+      <td class="text-end">{{ order.subtotal_sin_iva|currency }}</td><td class="text-end">{{ order.monto_pagado|currency }}</td><td class="text-end">{{ order.saldo_pendiente|currency }}</td>
+      <td><div class="d-flex justify-content-between small"><span>{{ '%.0f'|format(order.porcentaje_recepcion * 100) }}%</span></div><div class="progress" style="height:8px"><div class="progress-bar {% if order.porcentaje_recepcion >= 1 %}bg-success{% endif %}" style="width:{{ order.porcentaje_recepcion * 100 }}%"></div></div></td>
+      <td><span class="badge status-{{ order.estado_visible }}">{{ order.estado_visible }}</span></td>
+      <td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('compras.order_detail', order_id=order.id) }}">Abrir</a></td>
+    </tr>
+    {% else %}<tr><td colspan="11" class="text-center text-secondary py-5">No hay órdenes con estos filtros.</td></tr>{% endfor %}
+  </tbody>
+</table></div></div>
+{% endblock %}

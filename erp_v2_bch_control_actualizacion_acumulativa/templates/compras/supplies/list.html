@@ -1,0 +1,48 @@
+{% extends 'compras/base.html' %}
+{% block title %}Catálogo de insumos{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Catálogo de insumos</h1><p>Clasifica explícitamente los materiales permitidos para OC de Operaciones.</p></div>
+  <a class="btn btn-outline-primary" href="{{ url_for('compras.explosion_import') }}">Importar explosión</a>
+</div>
+
+{% if current_user.tiene_permiso('compras','crear') %}
+<div class="card mb-4 no-print"><div class="card-body">
+  <h2 class="h5">Nuevo insumo</h2>
+  <form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="row g-2 align-items-end">
+      <div class="col-md-2"><label class="form-label required">Clave</label><input class="form-control" name="clave" maxlength="40" required></div>
+      <div class="col-md-4"><label class="form-label required">Descripción</label><input class="form-control" name="descripcion" maxlength="180" required></div>
+      <div class="col-md-2"><label class="form-label required">Tipo</label><select class="form-select" name="tipo" required>{% for value in ['MATERIAL','EQUIPO','MANO_OBRA','SUBCONTRATO','INDIRECTO'] %}<option>{{ value }}</option>{% endfor %}</select></div>
+      <div class="col-md-2"><label class="form-label required">Unidad</label><input class="form-control" name="unidad" maxlength="20" required></div>
+      <div class="col-md-2"><label class="form-label">Clave SAT</label><input class="form-control" name="clave_sat" value="00000000"></div>
+      <div class="col-md-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="precio_variable" id="precio_variable" checked><label class="form-check-label" for="precio_variable">Precio variable</label></div></div>
+      <div class="col-md-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="es_operacion" id="new-operation"><label class="form-check-label" for="new-operation">Permitido en Operaciones</label></div></div>
+      <div class="col-md-4"><label class="form-label">Categoría operativa</label><select class="form-select" name="categoria_operacion"><option value="">Selecciona</option>{% for value, label in operation_categories.items() %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div>
+      <div class="col-md-2"><button class="btn btn-primary w-100">Guardar insumo</button></div>
+    </div>
+  </form>
+</div></div>
+{% endif %}
+
+<div class="card"><div class="table-responsive"><table class="table table-sm table-hover mb-0">
+  <thead><tr><th>Clave</th><th>Descripción</th><th>Tipo / unidad</th><th>Clasificación de Operaciones</th><th>Estado</th><th></th></tr></thead>
+  <tbody>{% for supply in supplies %}<tr>
+    <td><strong>{{ supply.clave }}</strong><br><small>SAT {{ supply.clave_sat }}</small></td>
+    <td>{{ supply.descripcion }}</td>
+    <td>{{ supply.tipo }} · {{ supply.unidad }}</td>
+    <td>
+      {% if current_user.tiene_permiso('compras','editar') %}
+      <form class="d-flex gap-2 align-items-center" method="post" action="{{ url_for('compras.supply_operation_classification', supply_id=supply.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" name="es_operacion" aria-label="Permitido en operaciones" {% if supply.es_operacion %}checked{% endif %}></div>
+        <select class="form-select form-select-sm" name="categoria_operacion"><option value="">No operativo</option>{% for value, label in operation_categories.items() %}<option value="{{ value }}" {% if supply.categoria_operacion == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+        <button class="btn btn-sm btn-outline-primary">Guardar</button>
+      </form>
+      {% elif supply.es_operacion %}<span class="badge text-bg-info">{{ operation_categories.get(supply.categoria_operacion, supply.categoria_operacion) }}</span>{% else %}<span class="text-secondary">No operativo</span>{% endif %}
+    </td>
+    <td>{{ 'Activo' if supply.activo else 'Inactivo' }}</td>
+    <td>{% if current_user.tiene_permiso('compras','eliminar') %}<form method="post" action="{{ url_for('compras.supply_toggle', supply_id=supply.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-outline-secondary">{{ 'Desactivar' if supply.activo else 'Activar' }}</button></form>{% endif %}</td>
+  </tr>{% else %}<tr><td colspan="6" class="text-center text-secondary py-5">No hay insumos.</td></tr>{% endfor %}</tbody>
+</table></div></div>
+{% endblock %}

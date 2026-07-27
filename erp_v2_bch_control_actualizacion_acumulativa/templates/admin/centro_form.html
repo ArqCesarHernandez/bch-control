@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}{{ "Editar" if centro else "Nuevo" }} centro{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-8 col-xl-7">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+            <div>
+                <p class="text-primary fw-semibold mb-1">Centros de costo</p>
+                <h1 class="h2 fw-bold mb-2">
+                    {{ "Editar centro de costo" if centro else "Nuevo centro de costo" }}
+                </h1>
+                <p class="text-secondary mb-0">
+                    Registra la información general de la obra u oficina.
+                </p>
+            </div>
+            {% if centro %}
+            <span class="badge text-bg-{{ 'success' if centro.estado == 'activa' else 'secondary' }} px-3 py-2">
+                {{ "Activa" if centro.estado == "activa" else "Cerrada" }}
+            </span>
+            {% endif %}
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4 p-lg-5">
+                <form method="post" novalidate>
+                    {{ form.hidden_tag() }}
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-12 col-md-8">
+                            {{ form.nombre.label(class="form-label") }}
+                            {{ form.nombre(
+                                class="form-control" + (" is-invalid" if form.nombre.errors else ""),
+                                autofocus=true,
+                                autocomplete="off"
+                            ) }}
+                            {% for error in form.nombre.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-12 col-md-4">
+                            {{ form.codigo.label(class="form-label") }}
+                            {{ form.codigo(class="form-control" + (" is-invalid" if form.codigo.errors else "")) }}
+                            {% for error in form.codigo.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                            <div class="form-text">{{ form.codigo.description }}</div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mt-1">
+                        <div class="col-12 col-md-6">
+                            {{ form.presupuesto_total.label(class="form-label") }}
+                            {{ form.presupuesto_total(class="form-control" + (" is-invalid" if form.presupuesto_total.errors else ""), min="0", step="0.01") }}
+                            {% for error in form.presupuesto_total.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="col-12 col-md-6">
+                            {{ form.presupuesto_mano_obra.label(class="form-label") }}
+                            {{ form.presupuesto_mano_obra(class="form-control" + (" is-invalid" if form.presupuesto_mano_obra.errors else ""), min="0", step="0.01") }}
+                            {% for error in form.presupuesto_mano_obra.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="col-12">
+                            {{ form.descripcion.label(class="form-label") }}
+                            {{ form.descripcion(class="form-control" + (" is-invalid" if form.descripcion.errors else ""), rows="3") }}
+                            {% for error in form.descripcion.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            {{ form.tipo.label(class="form-label") }}
+                            {{ form.tipo(
+                                class="form-select" + (" is-invalid" if form.tipo.errors else "")
+                            ) }}
+                            {% for error in form.tipo.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-12 col-md-6">
+                            {{ form.fecha_apertura.label(class="form-label") }}
+                            {{ form.fecha_apertura(
+                                class="form-control" + (" is-invalid" if form.fecha_apertura.errors else "")
+                            ) }}
+                            {% for error in form.fecha_apertura.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                            {% if form.fecha_apertura.description %}
+                            <div class="form-text">{{ form.fecha_apertura.description }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="alert alert-light border mt-4 mb-0 small">
+                        El estado se cambia desde el listado. Al cerrar un centro se registra
+                        la fecha de cierre, pero el registro y su historial se conservan.
+                    </div>
+
+                    <div class="d-flex gap-2 justify-content-end flex-wrap mt-4">
+                        {% if centro and centro.tipo == 'obra' %}
+                        <a href="{{ url_for('compras.explosion_import') }}" class="btn btn-outline-primary">
+                            Cargar explosión de insumos
+                        </a>
+                        {% endif %}
+                        <a href="{{ url_for('admin.centros_lista') }}" class="btn btn-outline-secondary">
+                            Cancelar
+                        </a>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

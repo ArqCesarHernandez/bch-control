@@ -1,0 +1,28 @@
+{% extends 'compras/base.html' %}
+{% block title %}Tarjetas de crédito{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Tarjetas de crédito</h1><p>Fechas de corte, vencimientos y pagos de las empresas pagadoras.</p></div>
+  {% if current_user.tiene_permiso('tarjetas_credito','crear') %}<a class="btn btn-primary" href="{{ url_for('compras.credit_card_new') }}">Nueva tarjeta</a>{% endif %}
+</div>
+
+<div class="row g-4">
+{% for card in cards %}
+  <div class="col-xl-6"><div class="card h-100 {% if card.alert_due %}border border-danger{% endif %}">
+    <div class="card-header bg-white d-flex justify-content-between gap-2">
+      <div><strong>{{ card.empresa.codigo }} · {{ card.numero_tarjeta }}</strong><br><small>{{ card.empresa.nombre }}</small></div>
+      <div>{% if card.alert_due %}<span class="badge text-bg-danger">{% if card.due_days < 0 %}Vencida {{ -card.due_days }} día(s){% elif card.due_days == 0 %}Vence hoy{% else %}Vence en {{ card.due_days }} día(s){% endif %}</span>{% endif %} <span class="badge {{ 'text-bg-success' if card.activa else 'text-bg-secondary' }}">{{ 'Activa' if card.activa else 'Inactiva' }}</span></div>
+    </div>
+    <div class="card-body">
+      <div class="row g-3 mb-3"><div class="col-6"><small class="text-secondary">Fecha de corte</small><div class="fw-semibold">{{ card.fecha_corte|date_es }}</div></div><div class="col-6"><small class="text-secondary">Fecha límite de pago</small><div class="fw-semibold">{{ card.fecha_pago|date_es }}</div></div><div class="col-4"><small class="text-secondary">Límite</small><div>{{ card.limite_credito|currency }}</div></div><div class="col-4"><small class="text-secondary">Saldo</small><div class="fw-bold">{{ card.saldo_actual|currency }}</div></div><div class="col-4"><small class="text-secondary">Disponible</small><div>{{ card.disponible|currency }}</div></div></div>
+      <div class="d-flex gap-2 flex-wrap no-print">
+        {% if current_user.tiene_permiso('tarjetas_credito','crear') and card.activa and card.saldo_actual > 0 %}<a class="btn btn-sm btn-primary" href="{{ url_for('compras.credit_card_payment_new', card_id=card.id) }}">Registrar pago</a>{% endif %}
+        {% if current_user.tiene_permiso('tarjetas_credito','editar') %}<a class="btn btn-sm btn-outline-primary" href="{{ url_for('compras.credit_card_edit', card_id=card.id) }}">Editar corte y saldo</a>{% endif %}
+        {% if current_user.tiene_permiso('tarjetas_credito','eliminar') %}<form method="post" action="{{ url_for('compras.credit_card_toggle', card_id=card.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-outline-secondary">{{ 'Desactivar' if card.activa else 'Activar' }}</button></form>{% endif %}
+      </div>
+      {% if card.pagos %}<hr><h2 class="h6">Últimos pagos</h2><div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Fecha</th><th>Referencia</th><th class="text-end">Monto</th><th class="text-end">Saldo nuevo</th></tr></thead><tbody>{% for payment in card.pagos[:5] %}<tr><td>{{ payment.fecha|date_es }}</td><td>{{ payment.referencia or '—' }}</td><td class="text-end">{{ payment.monto|currency }}</td><td class="text-end">{{ payment.saldo_nuevo|currency }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+    </div>
+  </div></div>
+{% else %}<div class="col-12"><div class="card"><div class="card-body text-center text-secondary py-5">No hay tarjetas registradas.</div></div></div>{% endfor %}
+</div>
+{% endblock %}

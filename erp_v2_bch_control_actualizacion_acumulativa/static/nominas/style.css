@@ -1,0 +1,61 @@
+:root {
+    --brand-navy: var(--color-primary);
+    --brand-navy-dark: var(--color-sidebar);
+    --brand-blue-soft: #edf3f8;
+    --brand-gold: var(--color-accent);
+    --surface: #ffffff;
+    --page: var(--color-bg);
+}
+
+body {
+    background: var(--page);
+    color: #263746;
+    min-height: 100vh;
+}
+
+.page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.4rem; }
+.page-header h1 { font-size: 1.75rem; margin: 0; color: var(--brand-navy); }
+.page-header p { margin: .3rem 0 0; color: #6c7b87; }
+
+.card { border: 0; border-radius: 10px; box-shadow: 0 .25rem 1rem rgba(31, 64, 89, .08); }
+.card-header { background: var(--surface); border-bottom-color: #e7edf2; font-weight: 650; }
+.kpi-card { position: relative; overflow: hidden; min-height: 132px; }
+.kpi-card::after { content: ""; position: absolute; width: 90px; height: 90px; right: -25px; bottom: -35px; border-radius: 50%; background: rgba(36,85,122,.08); }
+.budget-alert-card { border: 1px solid #f0ad4e; background: #fff9e8; }
+.budget-alert-card::after { background: rgba(240,173,78,.18); }
+.kpi-label { color: #70808e; font-size: .82rem; text-transform: uppercase; letter-spacing: .035em; }
+.kpi-value { color: var(--brand-navy-dark); font-size: clamp(1.45rem, 3vw, 2rem); font-weight: 750; }
+
+.table thead th { background: var(--color-primary); color: white; border-color: #315272; font-size: .78rem; vertical-align: middle; white-space: nowrap; }
+.table tbody td { vertical-align: middle; }
+.table-striped > tbody > tr:nth-of-type(odd) > * { --bs-table-accent-bg: rgba(36,85,122,.035); }
+.table-responsive { border-radius: .65rem; }
+.table-payroll { min-width: 2050px; }
+.table-payroll input, .table-payroll select { min-width: 105px; font-size: .8rem; }
+.table-payroll .name-cell { min-width: 245px; position: sticky; left: 0; background: white; z-index: 2; box-shadow: 2px 0 4px rgba(0,0,0,.06); }
+.table-payroll thead .name-cell { background: var(--brand-navy); z-index: 4; }
+.attendance-box { display: flex; gap: .35rem; justify-content: center; }
+.attendance-box label { display: grid; place-items: center; gap: .1rem; font-size: .68rem; }
+
+.form-label { font-weight: 620; color: #435867; }
+.required::after { content: " *"; color: #c33d4d; }
+.form-hint { font-size: .78rem; color: #71818d; }
+.section-title { color: var(--brand-navy); font-weight: 700; border-bottom: 1px solid #e5ebef; padding-bottom: .55rem; margin-bottom: 1rem; }
+
+.progress { height: .62rem; background: #e8edf1; }
+.progress-bar { background-color: var(--brand-navy); }
+.budget-negative { color: #bb2d3b; font-weight: 700; }
+.budget-positive { color: #157347; font-weight: 650; }
+.flash-stack { position: relative; z-index: 1080; }
+.empty-state { background: white; border: 1px dashed #c9d5de; border-radius: .8rem; }
+.soft-panel { background: var(--brand-blue-soft); border-radius: .75rem; padding: 1rem; }
+.money-output { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sticky-actions { position: sticky; bottom: .75rem; z-index: 20; background: rgba(255,255,255,.96); backdrop-filter: blur(8px); border: 1px solid #dde6ec; border-radius: .8rem; box-shadow: 0 .5rem 1.4rem rgba(28, 57, 78, .14); }
+
+@media (max-width: 767.98px) {
+    .page-header { flex-direction: column; }
+    .page-header .btn-toolbar, .page-header > div:last-child { width: 100%; }
+    .page-header .btn { flex: 1 1 auto; }
+    main { padding-top: 1rem !important; }
+    .card-body { padding: 1rem; }
+}

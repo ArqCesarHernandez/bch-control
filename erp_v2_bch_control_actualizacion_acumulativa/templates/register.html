@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Administrador inicial{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-md-9 col-lg-7 col-xl-6">
+        <div class="text-center mb-4">
+            <span class="badge text-bg-warning mb-3">Configuración inicial</span>
+            <h1 class="h2 fw-bold">Crear administrador inicial</h1>
+            <p class="text-secondary mb-0">
+                Esta pantalla se deshabilitará automáticamente después de crear la primera cuenta.
+            </p>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4 p-lg-5">
+                <form method="post" novalidate>
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        {{ form.nombre_completo.label(class="form-label") }}
+                        {{ form.nombre_completo(
+                            class="form-control" + (" is-invalid" if form.nombre_completo.errors else ""),
+                            autocomplete="name",
+                            autofocus=true
+                        ) }}
+                        {% for error in form.nombre_completo.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.correo.label(class="form-label") }}
+                        {{ form.correo(
+                            class="form-control" + (" is-invalid" if form.correo.errors else ""),
+                            autocomplete="email",
+                            inputmode="email"
+                        ) }}
+                        {% for error in form.correo.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            {{ form.contrasena.label(class="form-label") }}
+                            {{ form.contrasena(
+                                class="form-control" + (" is-invalid" if form.contrasena.errors else ""),
+                                autocomplete="new-password"
+                            ) }}
+                            {% for error in form.contrasena.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.confirmar_contrasena.label(class="form-label") }}
+                            {{ form.confirmar_contrasena(
+                                class="form-control" + (" is-invalid" if form.confirmar_contrasena.errors else ""),
+                                autocomplete="new-password"
+                            ) }}
+                            {% for error in form.confirmar_contrasena.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="form-text mt-2">
+                        Usa por lo menos ocho caracteres y no compartas esta contraseña.
+                    </div>
+
+                    <div class="d-grid gap-2 mt-4">
+                        {{ form.submit(class="btn btn-primary btn-lg") }}
+                        <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary">
+                            Volver al inicio de sesión
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

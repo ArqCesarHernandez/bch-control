@@ -1,0 +1,84 @@
+{% extends 'compras/base.html' %}
+{% block title %}{{ 'Editar ' ~ order.folio if editing else 'Nueva Orden de Compra' }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>{{ 'Editar borrador ' ~ order.folio if editing else 'Nueva OC de ' ~ (order_type|title if order_type else 'Compra') }}</h1><p>{% if editing %}Puedes cambiar proveedor, materiales, cantidades, precios y método mientras no se emita ni se envíe a autorización.{% elif order_type == 'OPERACIONES' %}Flujo directo del supervisor/administrador con materiales operativos autorizados.{% else %}Puede consolidar líneas aprobadas de varias requisiciones de Compras de la misma obra.{% endif %}</p></div>
+  <a class="btn btn-outline-secondary" href="{{ url_for('compras.orders_list') }}">Volver</a>
+</div>
+
+{% if not editing %}
+<form class="card card-body mb-4 no-print" method="get"><div class="row g-2 align-items-end"><div class="col-md-4"><label class="form-label required">Tipo de OC</label>{% if creatable_types|length == 1 %}{% set only_type = creatable_types|list|first %}<input type="hidden" name="tipo_oc" value="{{ only_type }}"><input class="form-control" value="{{ only_type|title }}" disabled>{% else %}<select class="form-select" name="tipo_oc" required><option value="">Selecciona</option><option value="OPERACIONES" {% if order_type == 'OPERACIONES' %}selected{% endif %}>Operaciones</option><option value="COMPRAS" {% if order_type == 'COMPRAS' %}selected{% endif %}>Compras</option></select>{% endif %}</div><div class="col-md-5"><label class="form-label required">Filtrar obra</label><select class="form-select" name="project_id" required><option value="">Selecciona</option>{% for project in projects %}<option value="{{ project.id }}" {% if selected_project_id == project.id %}selected{% endif %}>{{ project.codigo }} · {{ project.nombre }}</option>{% endfor %}</select></div><div class="col-md-3"><button class="btn btn-outline-primary w-100">Mostrar aprobadas vigentes</button></div></div></form>
+{% endif %}
+
+{% if selected_project_id %}
+<form method="post" id="order-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="project_id" value="{{ selected_project_id }}">
+  <input type="hidden" name="tipo_oc" value="{{ order_type }}">
+  <input type="hidden" name="quotation_id" value="{{ quotation.id if quotation else '' }}">
+  {% set selected_supplier = order.supplier if editing else quotation.supplier if quotation else none %}
+  <div class="card mb-4"><div class="card-body"><div class="row g-3">
+    <div class="col-12"><div class="alert {{ 'alert-info' if order_type == 'OPERACIONES' else 'alert-primary' }} py-2 mb-0"><strong>{{ order_type|title }}:</strong> el pago se clasificará automáticamente como <strong>{{ 'Pagos proveedores nómina' if order_type == 'OPERACIONES' else 'Pagos proveedores compras' }}</strong>.</div></div>
+    <div class="col-md-5">
+      <label class="form-label required">Buscar proveedor</label>
+      <input class="form-control" id="supplier-search" list="supplier-options" value="{{ selected_supplier.etiqueta if selected_supplier else '' }}" placeholder="Escribe código o nombre" autocomplete="off" required>
+      <input type="hidden" id="supplier-id" name="supplier_id" value="{{ selected_supplier.id if selected_supplier else '' }}">
+      <datalist id="supplier-options">{% for supplier in suppliers %}<option value="{{ supplier.etiqueta }}">{% if supplier.tiene_credito %}Crédito {{ supplier.dias_credito }} días · disponible {{ supplier.credito_disponible|currency }}{% else %}Sin línea de crédito{% endif %}</option>{% endfor %}</datalist>
+      <div class="form-text">El campo busca por las primeras letras; no necesitas recorrer un desplegable.</div>
+    </div>
+    <div class="col-md-4"><label class="form-label required">Empresa que pagará</label><select class="form-select" name="company_id" required><option value="">Selecciona</option>{% for company in companies %}<option value="{{ company.id }}" {% if editing and order.company_id == company.id %}selected{% endif %}>{{ company.codigo }} · {{ company.nombre }}</option>{% endfor %}</select></div>
+    <div class="col-md-3"><label class="form-label required">Método de pago</label><div class="input-group"><select class="form-select" id="payment-method" name="payment_method_id" required><option value="">Selecciona</option>{% for method in methods %}<option value="{{ method.id }}" {% if editing and order.payment_method_id == method.id %}selected{% endif %}>{{ method.nombre }}</option>{% endfor %}</select><button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#paymentMethodModal" title="Agregar método de pago">Agregar</button></div></div>
+    <div class="col-md-4"><label class="form-label required">Modalidad</label><select class="form-select" name="modalidad_pago" id="modality"><option value="CREDITO" {% if not editing or order.modalidad_pago == 'CREDITO' %}selected{% endif %}>Crédito / pago contra recepción</option><option value="ANTICIPO" {% if editing and order.modalidad_pago == 'ANTICIPO' %}selected{% endif %}>Anticipo total o parcial</option></select></div>
+    <div class="col-md-4"><label class="form-label required">Fecha estimada de surtido</label><input class="form-control" type="date" name="fecha_entrega_estimada" min="{{ today.isoformat() }}" value="{{ order.fecha_entrega_estimada.isoformat() if editing else '' }}" required></div>
+    <div class="col-md-4"><label class="form-label">Notas</label><input class="form-control" name="notas" value="{{ (order.notas or '') if editing else '' }}"></div>
+    <div class="col-md-4 advance-field d-none"><label class="form-label required">Monto del anticipo</label><input class="form-control" type="number" min="0.01" step="0.01" name="anticipo_monto" value="{{ order.anticipo_monto if editing and order.modalidad_pago == 'ANTICIPO' else '' }}"></div>
+    <div class="col-md-8 advance-field d-none"><label class="form-label required">Justificación del anticipo</label><input class="form-control" name="justificacion_anticipo" value="{{ (order.justificacion_anticipo or '') if editing else '' }}"></div>
+  </div></div></div>
+
+  <div class="card"><div class="card-header bg-white fw-semibold">Líneas aprobadas vigentes</div><div class="table-responsive"><table class="table mb-0">
+    <thead><tr><th>Requisición / límite</th><th>Partida · material</th><th>Comentario del supervisor</th><th class="text-end">Pendiente aprobado</th><th class="text-end">Cantidad OC</th><th class="text-end">P.U. real s/IVA</th><th>{{ 'Quitar del borrador' if editing else 'Rechazar por Compras' }}</th></tr></thead>
+    <tbody>
+      {% for line in lines %}
+      {% set current_line = existing_order_lines.get(line.id) %}
+      <tr>
+        <td><a href="{{ url_for('compras.requisition_detail', requisition_id=line.requisition.id) }}">{{ line.requisition.folio }}</a><br><small>{{ line.requisition.fecha_limite_oc|date_es }}</small></td>
+        <td><strong>{{ line.explosion_item.budget_item.codigo }} · {{ line.explosion_item.supply_item.clave }}</strong><br><small>{{ line.explosion_item.supply_item.descripcion }}</small>{% if line.proveedor_sugerido %}<br><span class="badge text-bg-light border">Sugerido: {{ line.proveedor_sugerido }}</span>{% endif %}</td>
+        <td><small class="text-secondary">{{ line.notas or 'Sin observaciones' }}</small></td>
+        <td class="text-end">{{ '%.4f'|format(line.cantidad_pendiente_compra) }} {{ line.explosion_item.supply_item.unidad }}</td>
+        <td><input class="form-control form-control-sm text-end order-quantity" type="number" min="0" max="{{ line.cantidad_pendiente_compra + (current_line.cantidad if current_line else 0) }}" step="0.0001" name="cantidad_{{ line.id }}" value="{% if current_line %}{{ current_line.cantidad }}{% elif quotation %}{{ line.cantidad_pendiente_compra }}{% else %}0{% endif %}"></td>
+        <td><input class="form-control form-control-sm text-end" type="number" min="0.0001" step="0.0001" name="precio_{{ line.id }}" value="{% if current_line %}{{ current_line.precio_unitario_sin_iva }}{% else %}{{ quote_prices.get(line.id, line.explosion_item.precio_unitario_sin_iva) }}{% endif %}"></td>
+        <td>{% if editing %}<button class="btn btn-sm btn-outline-danger remove-line" type="button">Quitar</button>{% elif order_type == 'COMPRAS' %}<div class="form-check"><input class="form-check-input" type="checkbox" name="rechazar_{{ line.id }}" id="reject{{ line.id }}"><label class="form-check-label" for="reject{{ line.id }}">Rechazar</label></div><input class="form-control form-control-sm mt-1" name="motivo_rechazo_{{ line.id }}" placeholder="Motivo obligatorio">{% else %}<small class="text-secondary">—</small>{% endif %}</td>
+      </tr>
+      {% else %}<tr><td colspan="7" class="text-center text-secondary py-5">No hay cantidades aprobadas vigentes pendientes de OC.</td></tr>{% endfor %}
+    </tbody>
+  </table></div><div class="card-footer bg-white d-flex justify-content-between align-items-center"><a class="btn btn-outline-secondary" href="{{ url_for('compras.orders_list') }}">Cancelar edición</a><button class="btn btn-primary" {% if not lines %}disabled{% endif %}>{{ 'Guardar cambios del borrador' if editing else 'Crear OC en borrador' }}</button></div></div>
+</form>
+
+<div class="modal fade" id="paymentMethodModal" tabindex="-1" aria-labelledby="paymentMethodLabel" aria-hidden="true"><div class="modal-dialog modal-sm"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5" id="paymentMethodLabel">Agregar método de pago</h2><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><label class="form-label required" for="new-payment-method">Nombre</label><input class="form-control" id="new-payment-method" maxlength="80" placeholder="Ej. SPEI mismo día"></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button><button type="button" class="btn btn-primary" id="add-payment-method">Agregar</button></div></div></div></div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+const suppliers = {{ suppliers|map(attribute='etiqueta')|list|tojson }};
+const supplierIds = {{ suppliers|map(attribute='id')|list|tojson }};
+const supplierSearch = document.getElementById('supplier-search');
+const supplierId = document.getElementById('supplier-id');
+if (supplierSearch && supplierId) {
+  const syncSupplier = () => { const index = suppliers.indexOf(supplierSearch.value); supplierId.value = index >= 0 ? supplierIds[index] : ''; };
+  supplierSearch.addEventListener('input', syncSupplier);
+  supplierSearch.addEventListener('change', syncSupplier);
+  document.getElementById('order-form').addEventListener('submit', event => { syncSupplier(); if (!supplierId.value) { event.preventDefault(); supplierSearch.setCustomValidity('Selecciona un proveedor de las sugerencias.'); supplierSearch.reportValidity(); } });
+  supplierSearch.addEventListener('input', () => supplierSearch.setCustomValidity(''));
+}
+const modality = document.getElementById('modality');
+if (modality) { const toggle = () => document.querySelectorAll('.advance-field').forEach(el => el.classList.toggle('d-none', modality.value !== 'ANTICIPO')); modality.addEventListener('change', toggle); toggle(); }
+document.querySelectorAll('.remove-line').forEach(button => button.addEventListener('click', () => { const input = button.closest('tr').querySelector('.order-quantity'); input.value = '0'; button.closest('tr').classList.add('table-secondary'); }));
+const addMethod = document.getElementById('add-payment-method');
+if (addMethod) addMethod.addEventListener('click', () => {
+  const input = document.getElementById('new-payment-method'); const name = input.value.trim().replace(/\s+/g, ' ').toUpperCase();
+  if (!name) { input.setCustomValidity('Escribe el método de pago.'); input.reportValidity(); return; }
+  input.setCustomValidity(''); const select = document.getElementById('payment-method'); const option = new Option(name, `new:${name}`, true, true); select.add(option); bootstrap.Modal.getInstance(document.getElementById('paymentMethodModal')).hide();
+});
+</script>
+{% endblock %}

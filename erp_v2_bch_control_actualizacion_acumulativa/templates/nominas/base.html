@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}Nóminas{% endblock %}
+
+{% block module_styles %}
+<link href="{{ url_for('static', filename='nominas/style.css', v='20260722-2') }}" rel="stylesheet">
+{% endblock %}
+
+{% block module_scripts %}
+<script src="{{ url_for('static', filename='nominas/app.js', v='20260717-2') }}"></script>
+{% endblock %}

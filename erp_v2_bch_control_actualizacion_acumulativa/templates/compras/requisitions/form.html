@@ -1,0 +1,33 @@
+{% extends 'compras/base.html' %}
+{% block title %}Nueva requisición{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <div class="page-header">
+      <div><h1>Nueva requisición</h1><p>Fecha de solicitud: <strong>{{ requisition_date|date_es }}</strong>. Disponible todos los días.</p></div>
+      <a class="btn btn-outline-secondary" href="{{ url_for('compras.requisitions_list') }}">Volver</a>
+    </div>
+    <div class="card"><div class="card-body p-4">
+      <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label required">Tipo de requisición</label>
+            {% if visible_types|length == 1 %}
+            {% set only_type = visible_types|list|first %}<input type="hidden" name="tipo_requisicion" value="{{ only_type }}"><input class="form-control" value="{{ 'Operaciones' if only_type == 'OPERACIONES' else 'Compras / explosión de insumos' }}" disabled>
+            {% else %}
+            <select class="form-select" name="tipo_requisicion" required><option value="">Selecciona</option><option value="OPERACIONES">Operaciones</option><option value="COMPRAS">Compras / explosión de insumos</option></select>
+            {% endif %}
+            <div class="form-text">Operaciones acepta únicamente el catálogo autorizado y no pasa por el comprador.</div>
+          </div>
+          <div class="col-md-5"><label class="form-label required">Obra</label><select class="form-select" name="project_id" required><option value="">Selecciona</option>{% for project in projects %}<option value="{{ project.id }}">{{ project.codigo }} · {{ project.nombre }}</option>{% endfor %}</select></div>
+          <div class="col-md-3"><label class="form-label required">Fecha requerida</label><input class="form-control" type="date" name="fecha_requerida" min="{{ requisition_date.isoformat() }}" value="{{ requisition_date.isoformat() }}" required></div>
+          <div class="col-12"><label class="form-label required">Motivo / frente de trabajo</label><input class="form-control" name="motivo" maxlength="240" required></div>
+          <div class="col-12"><label class="form-label">Comentario general</label><textarea class="form-control" name="observaciones" rows="3"></textarea></div>
+        </div>
+        <div class="d-flex justify-content-end gap-2 mt-4"><a class="btn btn-outline-secondary" href="{{ url_for('compras.requisitions_list') }}">Cancelar</a><button class="btn btn-primary">Crear y agregar materiales</button></div>
+      </form>
+    </div></div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,140 @@
+{% extends 'compras/base.html' %}
+{% block title %}{{ requisition.folio }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="d-flex gap-2 align-items-center"><h1 class="mb-0">{{ requisition.folio }}</h1><span class="badge status-{{ requisition.estado }}">{{ requisition.estado }}</span><span class="badge {{ 'text-bg-info' if requisition.tipo_requisicion == 'OPERACIONES' else 'text-bg-primary' }}">{{ requisition.tipo_requisicion|title }}</span></div>
+    <p>{{ requisition.project.codigo }} · {{ requisition.project.nombre }}</p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap no-print">
+    <a class="btn btn-outline-secondary" href="{{ url_for('compras.requisitions_list') }}">Volver</a>
+    {% if requisition.tipo_requisicion == 'COMPRAS' and current_user.tiene_permiso('compras','ver') and requisition.estado in ['APROBADA','PARCIAL','CERRADA'] %}
+    <a class="btn btn-outline-primary" target="_blank" href="{{ url_for('compras.rfq_print', requisition_id=requisition.id) }}">Cotización genérica</a>
+    {% endif %}
+    {% set order_module = 'oc_operaciones' if requisition.tipo_requisicion == 'OPERACIONES' else 'compras' %}
+    {% if current_user.tiene_permiso(order_module,'crear') and requisition.estado in ['APROBADA','PARCIAL'] %}
+    <a class="btn btn-primary" href="{{ url_for('compras.order_new', requisition_id=requisition.id, tipo_oc=requisition.tipo_requisicion) }}">Generar OC de {{ requisition.tipo_requisicion|title }}</a>
+    {% endif %}
+  </div>
+</div>
+
+{% if requisition.tipo_requisicion == 'COMPRAS' and current_user.tiene_permiso('compras','editar') and requisition.estado in ['APROBADA','PARCIAL'] %}
+  {% if requisition.buyer_received_at %}
+  <div class="alert alert-success"><strong>Recepción por Compras confirmada.</strong> {{ requisition.buyer_received_by.nombre_completo }} · {{ requisition.buyer_received_at.strftime('%d/%m/%Y %H:%M') }}</div>
+  {% else %}
+  <div class="alert alert-warning d-flex justify-content-between align-items-center gap-3 flex-wrap">
+    <span><strong>Pendiente de revisión por Compras.</strong> Confirma la recepción antes de contactar proveedores.</span>
+    <form method="post" action="{{ url_for('compras.requisition_confirm_receipt', requisition_id=requisition.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-success">Confirmar recepción de requisición</button></form>
+  </div>
+  {% endif %}
+{% endif %}
+
+<div class="row g-4 mb-4">
+  <div class="col-lg-8"><div class="card h-100"><div class="card-body"><dl class="row mb-0">
+    <dt class="col-sm-4">Solicitante</dt><dd class="col-sm-8">{{ requisition.requested_by.nombre_completo }}</dd>
+    <dt class="col-sm-4">Solicitud</dt><dd class="col-sm-8">{{ requisition.fecha_solicitud|date_es }}</dd>
+    <dt class="col-sm-4">Fecha requerida</dt><dd class="col-sm-8">{{ requisition.fecha_requerida|date_es }}</dd>
+    <dt class="col-sm-4">Límite para OC</dt><dd class="col-sm-8">{{ requisition.fecha_limite_oc|date_es if requisition.fecha_limite_oc else 'Se calcula al aprobar' }}</dd>
+    <dt class="col-sm-4">Motivo</dt><dd class="col-sm-8">{{ requisition.motivo }}</dd>
+    <dt class="col-sm-4">Comentario general</dt><dd class="col-sm-8 mb-0">{{ requisition.observaciones or '—' }}</dd>
+  </dl></div></div></div>
+  <div class="col-lg-4"><div class="card h-100"><div class="card-body">
+    <small>Solicitado sin IVA</small><div class="fs-3 fw-bold">{{ requisition.total_solicitado|currency }}</div>
+    <small>Aprobado</small><div class="fs-4 fw-bold text-success">{{ requisition.total_aprobado|currency }}</div>
+    <small>Avance comprado</small><div class="fs-4 fw-bold">{{ '%.1f'|format(requisition.porcentaje_compra) }}%</div>
+    <div class="progress mt-2" style="height:10px"><div class="progress-bar {% if requisition.porcentaje_compra >= 100 %}bg-success{% endif %}" style="width:{{ '%.1f'|format(requisition.porcentaje_compra) }}%"></div></div>
+  </div></div></div>
+</div>
+
+{% if requisition.rejection_reason %}<div class="alert alert-danger"><strong>Motivo:</strong> {{ requisition.rejection_reason }}</div>{% endif %}
+
+{% if can_edit %}
+<div class="card mb-4 no-print">
+  <div class="card-header bg-white fw-semibold">Agregar o actualizar material</div>
+  <div class="card-body">
+    <form method="post" action="{{ url_for('compras.requisition_line_add', requisition_id=requisition.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="row g-3">
+        <div class="col-lg-8"><label class="form-label required">Partida → Insumo</label><select class="form-select" name="explosion_item_id" required><option value="">Selecciona</option>{% for entry in entries %}<option value="{{ entry.id }}" {% if available[entry.id] <= 0 %}disabled{% endif %}>{{ entry.budget_item.codigo }} → {{ entry.supply_item.clave }} · {{ entry.supply_item.descripcion }} (disp. {{ '%.4f'|format(available[entry.id]) }} {{ entry.supply_item.unidad }})</option>{% endfor %}</select></div>
+        <div class="col-lg-4"><label class="form-label required">Cantidad</label><input class="form-control" type="number" min="0.0001" step="0.0001" name="cantidad_solicitada" required></div>
+        <div class="col-lg-5"><label class="form-label">Proveedor sugerido</label><input class="form-control" name="proveedor_sugerido" maxlength="180" list="supplier-suggestions" placeholder="Escribe o selecciona un proveedor"><datalist id="supplier-suggestions">{% for supplier in suppliers %}<option value="{{ supplier.nombre }}">{{ supplier.codigo }}</option>{% endfor %}</datalist></div>
+        <div class="col-lg-7"><label class="form-label">Comentarios / especificaciones del supervisor</label><textarea class="form-control" name="notas" maxlength="240" rows="2" placeholder="Especificación, urgencia, marca, medida, lugar de entrega, etc."></textarea></div>
+      </div>
+      <div class="text-end mt-3"><button class="btn btn-primary">Agregar renglón</button></div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+{% if requisition.tipo_requisicion == 'COMPRAS' and current_user.tiene_permiso('compras','ver') and requisition.lines %}
+<form class="card card-body mb-4 no-print" method="get">
+  <div class="row g-2 align-items-end">
+    <div class="col-lg-9"><label class="form-label">Filtrar materiales por proveedor sugerido</label><select class="form-select" name="proveedor_sugerido"><option value="">Todos</option><option value="__SIN_SUGERENCIA__" {% if provider_filter == '__SIN_SUGERENCIA__' %}selected{% endif %}>Sin sugerencia</option>{% for provider in provider_options %}<option value="{{ provider }}" {% if provider_filter == provider %}selected{% endif %}>{{ provider }}</option>{% endfor %}</select></div>
+    <div class="col-lg-3"><button class="btn btn-outline-primary w-100">Aplicar filtro</button></div>
+  </div>
+</form>
+{% endif %}
+
+{% set approving = requisition.estado == 'PENDIENTE_AUTORIZACION' and current_user.rol == 'admin' and current_user.tiene_permiso('requisiciones','editar') %}
+{% if approving %}<form method="post" action="{{ url_for('compras.requisition_approve', requisition_id=requisition.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endif %}
+<div class="card mb-4">
+  <div class="table-responsive"><table class="table mb-0">
+    <thead><tr><th>Partida / material</th><th>Comentarios del supervisor</th><th>Proveedor sugerido</th><th class="text-end">Solicitado</th><th class="text-end">Aprobado</th><th style="min-width:190px">Avance comprado</th><th class="text-end">Faltante total</th><th></th></tr></thead>
+    <tbody>
+      {% for line in visible_lines %}
+      <tr>
+        <td><strong>{{ line.explosion_item.budget_item.codigo }} · {{ line.explosion_item.supply_item.clave }}</strong><br><small>{{ line.explosion_item.supply_item.descripcion }} · {{ line.explosion_item.supply_item.unidad }}</small>{% if line.motivo_rechazo_compras %}<br><span class="text-danger">Compras rechazó: {{ line.motivo_rechazo_compras }}</span>{% endif %}</td>
+        <td>{% if line.notas %}<small class="text-secondary"><strong>Observación:</strong> {{ line.notas }}</small>{% else %}<small class="text-secondary">Sin observaciones</small>{% endif %}</td>
+        <td>{{ line.proveedor_sugerido or 'Sin sugerencia' }}</td>
+        <td class="text-end">{{ '%.4f'|format(line.cantidad_solicitada) }}</td>
+        <td class="text-end">{% if approving %}<input class="form-control form-control-sm text-end" type="number" min="0" max="{{ line.cantidad_solicitada }}" step="0.0001" name="aprobada_{{ line.id }}" value="{{ line.cantidad_solicitada }}">{% else %}{{ '%.4f'|format(line.cantidad_aprobada) }}{% endif %}</td>
+        <td><div class="d-flex justify-content-between small"><span>{{ '%.4f'|format(line.cantidad_ordenada) }} de {{ '%.4f'|format(line.cantidad_solicitada) }}</span><strong>{{ '%.1f'|format(line.porcentaje_compra) }}%</strong></div><div class="progress" style="height:9px"><div class="progress-bar {% if line.porcentaje_compra >= 100 %}bg-success{% endif %}" style="width:{{ '%.1f'|format(line.porcentaje_compra) }}%"></div></div></td>
+        <td class="text-end fw-semibold">{{ '%.4f'|format(line.cantidad_pendiente_solicitada) }}</td>
+        <td>{% if can_edit %}<form method="post" action="{{ url_for('compras.requisition_line_delete', requisition_id=requisition.id, line_id=line.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-outline-danger">Eliminar</button></form>{% endif %}</td>
+      </tr>
+      {% else %}<tr><td colspan="8" class="text-center text-secondary py-5">No hay materiales para este filtro.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+  {% if approving %}<div class="card-footer bg-white text-end"><button class="btn btn-success">Aprobar cantidades capturadas</button></div>{% endif %}
+</div>
+{% if approving %}</form>{% endif %}
+
+<div class="d-flex flex-wrap gap-2 justify-content-end no-print mb-4">
+  {% if can_edit %}<form method="post" action="{{ url_for('compras.requisition_submit', requisition_id=requisition.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-success">Enviar para autorización</button></form>{% endif %}
+  {% if approving %}<form class="d-flex gap-2" method="post" action="{{ url_for('compras.requisition_reject', requisition_id=requisition.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input class="form-control" name="motivo_rechazo" placeholder="Motivo de rechazo" required><button class="btn btn-outline-danger">Rechazar completa</button></form>{% endif %}
+</div>
+
+{% if requisition.tipo_requisicion == 'COMPRAS' and requisition.estado in ['APROBADA','PARCIAL'] and current_user.tiene_permiso('compras','crear') and requisition.buyer_received_at %}
+<div class="card mb-4 no-print">
+  <div class="card-header bg-white fw-semibold">Preparar cotización por proveedor</div>
+  <div class="card-body">
+    <form method="post" action="{{ url_for('compras.quotations_create', requisition_id=requisition.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="row g-3">
+        <div class="col-lg-5"><label class="form-label required">Proveedor(es)</label><select class="form-select" id="quotation-suppliers" name="supplier_ids" multiple size="5" required>{% for supplier in suppliers %}<option value="{{ supplier.id }}">{{ supplier.etiqueta }}{% if not supplier.email %} · SIN CORREO{% endif %}</option>{% endfor %}</select><small class="text-secondary">Selecciona uno o varios. Para correo, el proveedor debe tener email.</small></div>
+        <div class="col-lg-7"><label class="form-label required">Materiales incluidos</label><div class="border rounded p-2" style="max-height:190px;overflow:auto">{% for line in visible_lines if line.estado_linea == 'APROBADA' and line.cantidad_pendiente_compra > 0 %}<div class="form-check"><input class="form-check-input" type="checkbox" name="line_ids" value="{{ line.id }}" id="quote-line-{{ line.id }}" checked><label class="form-check-label" for="quote-line-{{ line.id }}"><strong>{{ line.explosion_item.supply_item.clave }}</strong> · {{ line.explosion_item.supply_item.descripcion }} · {{ '%.4f'|format(line.cantidad_pendiente_compra) }} {{ line.explosion_item.supply_item.unidad }}{% if line.proveedor_sugerido %} · sugerido: {{ line.proveedor_sugerido }}{% endif %}</label></div>{% else %}<span class="text-secondary">No hay materiales pendientes en este filtro.</span>{% endfor %}</div></div>
+      </div>
+      {% set has_suggestions = namespace(value=false) %}{% for line in visible_lines %}{% if suggestions_by_line.get(line.id) %}{% set has_suggestions.value=true %}{% endif %}{% endfor %}
+      {% if has_suggestions.value %}<div class="soft-panel mt-3"><strong>Proveedores sugeridos por precio histórico</strong><div class="mt-2">{% for line in visible_lines if suggestions_by_line.get(line.id) %}<div class="mb-2"><strong>{{ line.explosion_item.supply_item.clave }}:</strong> {% for history in suggestions_by_line[line.id] %}<button class="btn btn-sm btn-outline-primary me-1 supplier-suggestion" type="button" data-supplier-id="{{ history.supplier_id }}">{{ history.supplier.nombre }} · {{ history.precio_historico|currency }}</button>{% endfor %}</div>{% endfor %}</div></div>{% endif %}
+      <div class="text-end mt-3"><button class="btn btn-primary">Generar solicitud para enviar</button></div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+{% if requisition.tipo_requisicion == 'COMPRAS' and requisition.quotations and current_user.tiene_permiso('compras','ver') %}
+<div class="card mb-4"><div class="card-header bg-white d-flex justify-content-between"><strong>Cotizaciones</strong><a href="{{ url_for('compras.quotation_compare', requisition_id=requisition.id) }}">Ver comparativo</a></div><div class="list-group list-group-flush">{% for quote in requisition.quotations %}<a class="list-group-item list-group-item-action d-flex justify-content-between" href="{{ url_for('compras.quotation_detail', quotation_id=quote.id) }}"><span>{{ quote.folio }} · {{ quote.supplier.nombre }}</span><span>{% if quote.email_sent_at %}<span class="badge text-bg-success">Correo enviado</span>{% endif %} {% if quote.whatsapp_contacted_at %}<span class="badge text-bg-info">WhatsApp</span>{% endif %} <strong>{{ quote.total_cotizado|currency }}</strong> <span class="badge status-{{ quote.estado }}">{{ quote.estado }}</span></span></a>{% endfor %}</div></div>
+{% endif %}
+
+{% if requisition.orders %}<div class="card"><div class="card-header bg-white fw-semibold">Órdenes relacionadas</div><div class="list-group list-group-flush">{% for order in requisition.orders %}<a class="list-group-item list-group-item-action d-flex justify-content-between" href="{{ url_for('compras.order_detail', order_id=order.id) }}"><span>{{ order.folio }} · {{ order.supplier.nombre }}</span><span class="badge status-{{ order.estado }}">{{ order.estado }}</span></a>{% endfor %}</div></div>{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll('.supplier-suggestion').forEach(button => button.addEventListener('click', () => {
+  const select = document.getElementById('quotation-suppliers');
+  const option = select && select.querySelector(`option[value="${button.dataset.supplierId}"]`);
+  if (option) { option.selected = true; select.focus(); button.classList.replace('btn-outline-primary', 'btn-primary'); }
+}));
+</script>
+{% endblock %}

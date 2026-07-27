@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Centros de costo{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+    <div>
+        <p class="text-primary fw-semibold mb-1">Administración</p>
+        <h1 class="h2 fw-bold mb-2">Centros de costo</h1>
+        <p class="text-secondary mb-0">
+            Catálogo de obras y oficinas. Los registros cerrados conservan su historial.
+        </p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('auth.dashboard') }}" class="btn btn-outline-secondary">
+            Volver al panel
+        </a>
+        <a href="{{ url_for('admin.centro_nuevo') }}" class="btn btn-primary">
+            Nuevo centro
+        </a>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Código / nombre</th>
+                        <th>Tipo</th>
+                        <th>Estado</th>
+                        <th>Apertura</th>
+                        <th>Cierre</th>
+                        <th>Partidas</th>
+                        <th>Usuarios activos</th>
+                        <th class="text-end pe-4">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for centro in centros %}
+                    <tr>
+                        <td class="ps-4"><strong>{{ centro.codigo }}</strong><br><span class="text-secondary">{{ centro.nombre }}</span></td>
+                        <td>{{ "Obra" if centro.tipo == "obra" else "Oficina" }}</td>
+                        <td>
+                            {% if centro.estado == "activa" %}
+                            <span class="badge text-bg-success">Activa</span>
+                            {% else %}
+                            <span class="badge text-bg-secondary">Cerrada</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {{ centro.fecha_apertura.strftime("%d/%m/%Y") if centro.fecha_apertura else "—" }}
+                        </td>
+                        <td>
+                            {{ centro.fecha_cierre.strftime("%d/%m/%Y") if centro.fecha_cierre else "—" }}
+                        </td>
+                        <td>
+                            <span class="badge text-bg-{{ 'primary' if centro.budget_items else 'warning' }}">
+                                {{ centro.budget_items | length }}
+                            </span>
+                        </td>
+                        <td>
+                            {{ centro.usuarios | selectattr("activo") | list | length }}
+                        </td>
+                        <td class="text-end pe-4">
+                            <div class="d-inline-flex gap-2 flex-wrap justify-content-end">
+                                <a
+                                    href="{{ url_for('nominas.project_detail', project_id=centro.id) }}"
+                                    class="btn btn-sm btn-{{ 'outline-primary' if centro.budget_items else 'warning' }}"
+                                >
+                                    {{ "Partidas" if centro.budget_items else "Agregar partidas" }}
+                                </a>
+                                <a
+                                    href="{{ url_for('admin.centro_editar', centro_id=centro.id) }}"
+                                    class="btn btn-sm btn-outline-primary"
+                                >
+                                    Editar
+                                </a>
+                                <form
+                                    method="post"
+                                    action="{{ url_for('admin.centro_cambiar_estado', centro_id=centro.id) }}"
+                                    onsubmit="return confirm('¿Confirmas el cambio de estado de este centro de costo?');"
+                                    class="d-inline"
+                                >
+                                    {{ action_form.hidden_tag() }}
+                                    {% if centro.estado == "activa" %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        Cerrar
+                                    </button>
+                                    {% else %}
+                                    <button type="submit" class="btn btn-sm btn-outline-success">
+                                        Reactivar
+                                    </button>
+                                    {% endif %}
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center text-secondary py-5">
+                            Todavía no hay centros de costo registrados.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

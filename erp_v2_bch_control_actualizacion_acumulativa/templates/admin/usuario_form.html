@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Editar usuario' if usuario else 'Nuevo usuario' }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-8 col-xl-7">
+        <div class="mb-4">
+            <p class="text-primary fw-semibold mb-1">Usuarios</p>
+            <h1 class="h2 fw-bold mb-2">{{ 'Editar usuario' if usuario else 'Crear usuario' }}</h1>
+            <p class="text-secondary mb-0">
+                Administrador, Comprador y Costos tienen acceso global; Capturista y Supervisor deben quedar asignados a un centro activo.
+            </p>
+        </div>
+
+        {% if not has_active_centers %}
+        <div class="alert alert-warning">
+            No existen centros de costo activos. Puedes crear un administrador,
+            pero antes de crear un capturista o supervisor debes
+            {% if current_user.tiene_permiso('centros_costo','crear') %}<a href="{{ url_for('admin.centro_nuevo') }}" class="alert-link">registrar un centro</a>{% else %}solicitar que se registre un centro{% endif %}.
+        </div>
+        {% endif %}
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4 p-lg-5">
+                <form method="post" novalidate>
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        {{ form.nombre_completo.label(class="form-label") }}
+                        {{ form.nombre_completo(
+                            class="form-control" + (" is-invalid" if form.nombre_completo.errors else ""),
+                            autocomplete="name",
+                            autofocus=true
+                        ) }}
+                        {% for error in form.nombre_completo.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.correo.label(class="form-label") }}
+                        {{ form.correo(
+                            class="form-control" + (" is-invalid" if form.correo.errors else ""),
+                            autocomplete="email",
+                            inputmode="email"
+                        ) }}
+                        {% for error in form.correo.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            {{ form.contrasena.label(class="form-label") }}
+                            {{ form.contrasena(
+                                class="form-control" + (" is-invalid" if form.contrasena.errors else ""),
+                                autocomplete="new-password"
+                            ) }}
+                            {% for error in form.contrasena.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                            <div class="form-text">Mínimo ocho caracteres{% if usuario %}; déjala vacía para conservar la actual{% endif %}.</div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            {{ form.rol.label(class="form-label") }}
+                            {{ form.rol(
+                                class="form-select" + (" is-invalid" if form.rol.errors else ""),
+                                id="rol"
+                            ) }}
+                            {% for error in form.rol.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="mt-3" id="centro-costo-wrapper">
+                        {{ form.centro_costo_id.label(class="form-label") }}
+                        {{ form.centro_costo_id(
+                            class="form-select" + (" is-invalid" if form.centro_costo_id.errors else ""),
+                            id="centro_costo_id"
+                        ) }}
+                        {% for error in form.centro_costo_id.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                        {% if form.centro_costo_id.description %}
+                        <div class="form-text">{{ form.centro_costo_id.description }}</div>
+                        {% endif %}
+                    </div>
+
+                    {% if usuario %}
+                    <section class="mt-4 pt-4 border-top" aria-labelledby="permissions-title">
+                        <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
+                            <div>
+                                <h2 class="h5 mb-1" id="permissions-title">Permisos</h2>
+                                <p class="text-secondary small mb-0">Activa o desactiva cada acción por módulo. El alcance por obra y tipo de OC se sigue validando en el servidor.</p>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="reset-defaults">Restablecer valores del rol</button>
+                        </div>
+                        <div class="table-responsive border rounded">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr><th class="ps-3">Módulo</th>{% for action in actions %}<th class="text-center">{{ action|capitalize }}</th>{% endfor %}</tr>
+                                </thead>
+                                <tbody>
+                                    {% for module, label in modules.items() %}
+                                    <tr>
+                                        <th class="ps-3">{{ label }}</th>
+                                        {% for action in actions %}
+                                        <td class="text-center">
+                                            <input
+                                                class="form-check-input permission-checkbox"
+                                                type="checkbox"
+                                                name="perm_{{ module }}_{{ action }}"
+                                                data-module="{{ module }}"
+                                                data-action="{{ action }}"
+                                                {% if permission_matrix[module][action] %}checked{% endif %}
+                                                aria-label="{{ action }} en {{ label }}"
+                                            >
+                                        </td>
+                                        {% endfor %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                    {% endif %}
+
+                    <div class="d-flex gap-2 justify-content-end flex-wrap mt-4">
+                        <a href="{{ url_for('admin.usuarios_lista') }}" class="btn btn-outline-secondary">
+                            Cancelar
+                        </a>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const roleSelect = document.getElementById("rol");
+        const centerWrapper = document.getElementById("centro-costo-wrapper");
+        const centerSelect = document.getElementById("centro_costo_id");
+
+        function updateCenterVisibility() {
+            const isOperational = ["capturista", "supervisor"].includes(roleSelect.value);
+            centerWrapper.classList.toggle("d-none", !isOperational);
+            centerSelect.required = isOperational;
+
+            if (!isOperational) {
+                centerSelect.value = "0";
+            }
+        }
+
+        roleSelect.addEventListener("change", updateCenterVisibility);
+        updateCenterVisibility();
+
+        {% if usuario %}
+        const defaults = {{ default_matrices|tojson }};
+        const resetButton = document.getElementById("reset-defaults");
+        resetButton.addEventListener("click", function () {
+            const selectedDefaults = defaults[roleSelect.value] || {};
+            document.querySelectorAll(".permission-checkbox").forEach(function (checkbox) {
+                checkbox.checked = Boolean(
+                    selectedDefaults[checkbox.dataset.module] &&
+                    selectedDefaults[checkbox.dataset.module][checkbox.dataset.action]
+                );
+            });
+        });
+        {% endif %}
+    });
+</script>
+{% endblock %}

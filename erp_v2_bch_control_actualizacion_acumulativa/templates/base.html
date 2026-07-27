@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="BCH Control, sistema de gestión de construcción de Baja Custom Homes">
+    <meta name="theme-color" content="#0d2137">
+    <title>{% block title %}Inicio{% endblock %} · BCH Control</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+        crossorigin="anonymous"
+    >
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+        rel="stylesheet"
+    >
+    <link href="{{ url_for('static', filename='css/style.css', v='20260722-2') }}" rel="stylesheet">
+    {% block module_styles %}{% endblock %}
+    {% block head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{{ 'app-authenticated' if current_user.is_authenticated else 'guest-page' }}{% endblock %}">
+    <a class="skip-link" href="#main-content">Saltar al contenido</a>
+    {% set endpoint = request.endpoint or '' %}
+    {% set has_purchase_access = current_user.is_authenticated and (
+        current_user.tiene_permiso('compras', 'ver') or
+        current_user.tiene_permiso('requisiciones', 'ver') or
+        current_user.tiene_permiso('oc_operaciones', 'ver') or
+        current_user.tiene_permiso('proveedores', 'ver') or
+        current_user.tiene_permiso('reportes', 'ver') or
+        current_user.tiene_permiso('tarjetas_credito', 'ver')
+    ) %}
+
+    {% if current_user.is_authenticated %}
+    <div class="app-shell">
+        <aside
+            class="offcanvas-lg offcanvas-start app-sidebar no-print"
+            tabindex="-1"
+            id="appSidebar"
+            aria-labelledby="appSidebarLabel"
+        >
+            <div class="offcanvas-header app-sidebar-mobile-header d-lg-none">
+                <span class="fw-semibold" id="appSidebarLabel">Menú principal</span>
+                <button
+                    type="button"
+                    class="btn-close btn-close-white"
+                    data-bs-dismiss="offcanvas"
+                    data-bs-target="#appSidebar"
+                    aria-label="Cerrar menú"
+                ></button>
+            </div>
+
+            <div class="app-sidebar-inner">
+                <a class="app-brand" href="{{ url_for('auth.dashboard') }}" aria-label="BCH Control, inicio">
+                    <img
+                        class="app-brand-logo"
+                        src="{{ url_for('static', filename='img/logo-sidebar.png') }}"
+                        alt="Baja Custom Homes"
+                        onerror="this.hidden=true; this.nextElementSibling.hidden=false;"
+                    >
+                    <span class="app-brand-fallback" hidden>
+                        <i class="bi bi-building" aria-hidden="true"></i>
+                    </span>
+                    <span class="app-brand-name">BCH Control</span>
+                    <span class="app-brand-tagline">Gestión de construcción</span>
+                </a>
+
+                <nav class="app-nav" aria-label="Navegación principal">
+                    <div class="app-nav-section">
+                        <span class="app-nav-heading">General</span>
+                        <a
+                            class="app-nav-link {{ 'active' if endpoint == 'auth.dashboard' else '' }}"
+                            href="{{ url_for('auth.dashboard') }}"
+                            {% if endpoint == 'auth.dashboard' %}aria-current="page"{% endif %}
+                        >
+                            <i class="bi bi-grid-1x2-fill" aria-hidden="true"></i>
+                            <span>Inicio</span>
+                        </a>
+                    </div>
+
+                    {% if current_user.tiene_permiso('nomina', 'ver') %}
+                    <div class="app-nav-section">
+                        <span class="app-nav-heading">Nóminas</span>
+                        <a class="app-nav-link {{ 'active' if endpoint == 'nominas.dashboard' else '' }}" href="{{ url_for('nominas.dashboard') }}">
+                            <i class="bi bi-speedometer2" aria-hidden="true"></i><span>Panel de nóminas</span>
+                        </a>
+                        <a class="app-nav-link {{ 'active' if endpoint.startswith('nominas.payroll') else '' }}" href="{{ url_for('nominas.payrolls_list') }}">
+                            <i class="bi bi-cash-stack" aria-hidden="true"></i><span>Nóminas semanales</span>
+                        </a>
+                        <a class="app-nav-link {{ 'active' if endpoint.startswith('nominas.employee') else '' }}" href="{{ url_for('nominas.employees_list') }}">
+                            <i class="bi bi-people" aria-hidden="true"></i><span>Trabajadores</span>
+                        </a>
+                        <a class="app-nav-link {{ 'active' if endpoint.startswith('nominas.loan') else '' }}" href="{{ url_for('nominas.loans_list') }}">
+                            <i class="bi bi-wallet2" aria-hidden="true"></i><span>Préstamos</span>
+                        </a>
+                        <a class="app-nav-link {{ 'active' if endpoint.startswith('nominas.additional_payment') else '' }}" href="{{ url_for('nominas.additional_payments_list') }}">
+                            <i class="bi bi-plus-circle" aria-hidden="true"></i><span>Pagos adicionales</span>
+                        </a>
+                    </div>
+                    {% endif %}
+
+                    {% if has_purchase_access %}
+                    <div class="app-nav-section">
+                        <span class="app-nav-heading">Compras</span>
+                        <a class="app-nav-link {{ 'active' if endpoint == 'compras.dashboard' else '' }}" href="{{ url_for('compras.dashboard') }}">
+                            <i class="bi bi-bag-check" aria-hidden="true"></i><span>Panel de compras</span>
+                        </a>
+                        {% if current_user.tiene_permiso('compras', 'ver') %}
+                        <a class="app-nav-link {{ 'active' if endpoint.startswith('compras.explosion') else '' }}" href="{{ url_for('compras.explosion_list') }}">
+                            <i class="bi bi-boxes" aria-hidden="true"></i><span>Explosión de insumos</span>
+                        </a>
+                        {% endif %}
+                        {% if current_user.tiene_permiso('requisiciones', 'ver') %}
+                        <a class="app-nav-link {{ 'active' if endpoint.startswith('compras.requisition') or endpoint.startswith('compras.quotation') else '' }}" href="{{ url_for('compras.requisitions_list') }}">
+                            <i class="bi bi-clipboard-check" aria-hidden="true"></i><span>Requisiciones</span>
+                        </a>
+                        {% endif %}
+                        {% if current_user.tiene_permiso('compras', 'crear') or current_user.tiene_permiso('oc_operaciones', 'crear') %}
+                        <a class="app-nav-link {{ 'active' if endpoint == 'compras.order_new' else '' }}" href="{{ url_for('compras.order_new') }}">
+                            <i class="bi bi-file-earmark-plus" aria-hidden="true"></i><span>Nueva OC</span>
+                        </a>
+                        {% endif %}
+                        {% if current_user.tiene_permiso('compras', 'ver') or current_user.tiene_permiso('oc_operaciones', 'ver') %}
+                        <a class="app-nav-link {{ 'active' if endpoint.startswith('compras.order') and endpoint != 'compras.order_new' else '' }}" href="{{ url_for('compras.orders_list') }}">
+                            <i class="bi bi-receipt" aria-hidden="true"></i><span>Órdenes de compra</span>
+                        </a>
+                        <a class="app-nav-link {{ 'active' if endpoint.startswith('compras.supplier_payment') else '' }}" href="{{ url_for('compras.supplier_payments_list') }}">
+                            <i class="bi bi-credit-card-2-front" aria-hidden="true"></i><span>Pagos</span>
+                        </a>
+                        <a class="app-nav-link {{ 'active' if endpoint == 'compras.advance_balances' else '' }}" href="{{ url_for('compras.advance_balances') }}">
+                            <i class="bi bi-piggy-bank" aria-hidden="true"></i><span>Saldos de anticipos</span>
+                        </a>
+                        {% endif %}
+                        {% if current_user.tiene_permiso('proveedores', 'ver') %}
+                        <a class="app-nav-link {{ 'active' if endpoint.startswith('compras.supplier') and not endpoint.startswith('compras.supplier_payment') else '' }}" href="{{ url_for('compras.suppliers_list') }}">
+                            <i class="bi bi-truck" aria-hidden="true"></i><span>Proveedores</span>
+                        </a>
+                        {% endif %}
+                        {% if current_user.tiene_permiso('compras', 'ver') %}
+                        <a class="app-nav-link {{ 'active' if endpoint.startswith('compras.smnc') else '' }}" href="{{ url_for('compras.smnc_list') }}">
+                            <i class="bi bi-arrow-left-right" aria-hidden="true"></i><span>SMNC</span>
+                        </a>
+                        {% endif %}
+                        {% if current_user.tiene_permiso('tarjetas_credito', 'ver') %}
+                        <a class="app-nav-link {{ 'active' if endpoint.startswith('compras.credit_card') else '' }}" href="{{ url_for('compras.credit_cards_list') }}">
+                            <i class="bi bi-credit-card" aria-hidden="true"></i><span>Tarjetas de crédito</span>
+                        </a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if current_user.tiene_permiso('centros_costo', 'ver') or current_user.tiene_permiso('nomina', 'ver') %}
+                    <div class="app-nav-section">
+                        <span class="app-nav-heading">Obras y costos</span>
+                        {% if current_user.tiene_permiso('centros_costo', 'ver') %}
+                        <a class="app-nav-link {{ 'active' if endpoint.startswith('nominas.project') or endpoint.startswith('nominas.budget_item') else '' }}" href="{{ url_for('nominas.projects_list') }}">
+                            <i class="bi bi-buildings" aria-hidden="true"></i><span>Obras y partidas</span>
+                        </a>
+                        {% endif %}
+                        {% if current_user.tiene_permiso('nomina', 'ver') %}
+                        <a class="app-nav-link {{ 'active' if endpoint.startswith('nominas.subcontract') else '' }}" href="{{ url_for('nominas.subcontracts_list') }}">
+                            <i class="bi bi-person-workspace" aria-hidden="true"></i><span>Subcontratos</span>
+                        </a>
+                        <a class="app-nav-link {{ 'active' if endpoint.startswith('nominas.contractor') else '' }}" href="{{ url_for('nominas.contractors_list') }}">
+                            <i class="bi bi-person-vcard" aria-hidden="true"></i><span>Contratistas</span>
+                        </a>
+                        <a class="app-nav-link {{ 'active' if endpoint.startswith('nominas.office_expense') else '' }}" href="{{ url_for('nominas.office_expenses_list') }}">
+                            <i class="bi bi-building-gear" aria-hidden="true"></i><span>Gastos de oficina</span>
+                        </a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if current_user.tiene_permiso('reportes', 'ver') %}
+                    <div class="app-nav-section">
+                        <span class="app-nav-heading">Reportes</span>
+                        {% if current_user.tiene_permiso('nomina', 'ver') %}
+                        <a class="app-nav-link {{ 'active' if endpoint.startswith('nominas.report') or endpoint == 'nominas.weekly_closing_report' else '' }}" href="{{ url_for('nominas.reports_index') }}">
+                            <i class="bi bi-bar-chart-line" aria-hidden="true"></i><span>Reportes de nómina</span>
+                        </a>
+                        {% endif %}
+                        {% if has_purchase_access %}
+                        <a class="app-nav-link {{ 'active' if endpoint.startswith('compras.report') or endpoint.startswith('compras.weekly_supplier') or endpoint == 'compras.payroll_operations_report' or endpoint == 'compras.supplier_payments_report' else '' }}" href="{{ url_for('compras.reports_index') }}">
+                            <i class="bi bi-graph-up-arrow" aria-hidden="true"></i><span>Reportes de compras</span>
+                        </a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if current_user.tiene_permiso('usuarios', 'ver') or current_user.tiene_permiso('centros_costo', 'ver') or current_user.tiene_permiso('nomina', 'editar') or current_user.tiene_permiso('compras', 'editar') %}
+                    <div class="app-nav-section">
+                        <span class="app-nav-heading">Administración</span>
+                        {% if current_user.tiene_permiso('usuarios', 'ver') %}
+                        <a class="app-nav-link {{ 'active' if endpoint.startswith('admin.usuario') else '' }}" href="{{ url_for('admin.usuarios_lista') }}">
+                            <i class="bi bi-person-gear" aria-hidden="true"></i><span>Usuarios y permisos</span>
+                        </a>
+                        {% endif %}
+                        {% if current_user.tiene_permiso('centros_costo', 'ver') %}
+                        <a class="app-nav-link {{ 'active' if endpoint.startswith('admin.centro') else '' }}" href="{{ url_for('admin.centros_lista') }}">
+                            <i class="bi bi-diagram-3" aria-hidden="true"></i><span>Centros de costo</span>
+                        </a>
+                        {% endif %}
+                        {% if current_user.tiene_permiso('nomina', 'editar') %}
+                        <a class="app-nav-link {{ 'active' if endpoint.startswith('nominas.compan') else '' }}" href="{{ url_for('nominas.companies_list') }}">
+                            <i class="bi bi-bank" aria-hidden="true"></i><span>Empresas de pago</span>
+                        </a>
+                        {% endif %}
+                        {% if current_user.tiene_permiso('compras', 'editar') %}
+                        <a class="app-nav-link {{ 'active' if endpoint == 'compras.supplies_list' else '' }}" href="{{ url_for('compras.supplies_list') }}">
+                            <i class="bi bi-box-seam" aria-hidden="true"></i><span>Catálogo de insumos</span>
+                        </a>
+                        <a class="app-nav-link {{ 'active' if endpoint.startswith('compras.payment_method') else '' }}" href="{{ url_for('compras.payment_methods_list') }}">
+                            <i class="bi bi-cash-coin" aria-hidden="true"></i><span>Métodos de pago</span>
+                        </a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </nav>
+
+                <div class="app-sidebar-footer">
+                    <div class="app-user">
+                        <span class="app-user-avatar" aria-hidden="true">
+                            {{ current_user.nombre_completo[:1]|upper }}
+                        </span>
+                        <span class="app-user-copy">
+                            <strong>{{ current_user.nombre_completo }}</strong>
+                            <small>{{ current_user.rol_etiqueta }}</small>
+                        </span>
+                    </div>
+                    <form method="post" action="{{ url_for('auth.logout') }}" class="m-0">
+                        {{ logout_form.hidden_tag() }}
+                        <button type="submit" class="btn app-logout w-100">
+                            <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+                            Cerrar sesión
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </aside>
+
+        <div class="app-main">
+            <header class="app-topbar no-print">
+                <button
+                    class="btn app-menu-toggle d-lg-none"
+                    type="button"
+                    data-bs-toggle="offcanvas"
+                    data-bs-target="#appSidebar"
+                    aria-controls="appSidebar"
+                    aria-label="Abrir menú"
+                >
+                    <i class="bi bi-list" aria-hidden="true"></i>
+                </button>
+
+                <div class="app-topbar-copy">
+                    <nav aria-label="Ruta de navegación">
+                        <ol class="breadcrumb mb-1">
+                            <li class="breadcrumb-item"><a href="{{ url_for('auth.dashboard') }}">Inicio</a></li>
+                            {% if request.blueprint == 'compras' %}
+                            <li class="breadcrumb-item"><a href="{{ url_for('compras.dashboard') }}">Compras</a></li>
+                            {% elif request.blueprint == 'nominas' %}
+                            <li class="breadcrumb-item"><a href="{{ url_for('nominas.dashboard') }}">Nóminas</a></li>
+                            {% elif request.blueprint == 'admin' %}
+                            <li class="breadcrumb-item">Administración</li>
+                            {% endif %}
+                            <li class="breadcrumb-item active" aria-current="page">{{ self.title()|striptags }}</li>
+                        </ol>
+                    </nav>
+                    <h1 class="app-page-title">{% block page_heading %}{{ self.title()|striptags }}{% endblock %}</h1>
+                </div>
+
+                <div class="app-topbar-actions">
+                    {% block topbar_actions %}
+                    <span class="role-pill">
+                        <i class="bi bi-person-check" aria-hidden="true"></i>
+                        {{ current_user.rol_etiqueta }}
+                    </span>
+                    {% endblock %}
+                </div>
+            </header>
+    {% endif %}
+
+            <main id="main-content" class="{{ 'app-content' if current_user.is_authenticated else 'guest-content' }} flex-grow-1">
+                {% if current_user.is_authenticated %}
+                    {% block back_navigation %}
+                    {% if endpoint != 'auth.dashboard' %}
+                    <div class="content-back no-print">
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-outline-secondary"
+                            onclick="if (history.length > 1) { history.back(); } else { window.location='{{ url_for('auth.dashboard') }}'; }"
+                        >
+                            <i class="bi bi-arrow-left" aria-hidden="true"></i> Volver
+                        </button>
+                    </div>
+                    {% endif %}
+                    {% endblock %}
+                {% endif %}
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                    <div class="flash-stack" aria-live="polite" aria-atomic="true">
+                        {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar aviso"></button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                {% endwith %}
+
+                {% block content %}{% endblock %}
+            </main>
+
+    {% if current_user.is_authenticated %}
+            <footer class="app-footer no-print">
+                © 2026 Baja Custom Homes – BCH Control
+            </footer>
+        </div>
+    </div>
+    {% endif %}
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+        crossorigin="anonymous"
+    ></script>
+    {% block module_scripts %}{% endblock %}
+    {% block scripts %}{% endblock %}
+</body>
+</html>

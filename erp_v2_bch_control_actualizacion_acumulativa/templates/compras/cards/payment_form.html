@@ -1,0 +1,12 @@
+{% extends 'compras/base.html' %}
+{% block title %}Pago de tarjeta{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-lg-7">
+  <div class="page-header"><div><h1>Registrar pago de tarjeta</h1><p>{{ card.empresa.codigo }} · {{ card.numero_tarjeta }} · saldo {{ card.saldo_actual|currency }}</p></div><a class="btn btn-outline-secondary" href="{{ url_for('compras.credit_cards_list') }}">Volver</a></div>
+  <div class="card"><div class="card-body p-4"><form method="post">{{ form.hidden_tag() }}
+    <div class="row g-3"><div class="col-md-6">{{ form.fecha.label(class='form-label required') }}{{ form.fecha(class='form-control') }}</div><div class="col-md-6">{{ form.monto.label(class='form-label required') }}{{ form.monto(class='form-control', min='0.01', max=card.saldo_actual, step='0.01') }}</div><div class="col-md-6">{{ form.referencia.label(class='form-label') }}{{ form.referencia(class='form-control') }}</div><div class="col-12">{{ form.notas.label(class='form-label') }}{{ form.notas(class='form-control', rows='3') }}</div></div>
+    <div class="alert alert-info mt-3 mb-0">El pago reducirá el saldo actual y quedará en el historial auditable.</div>
+    <div class="d-flex justify-content-end gap-2 mt-4"><a class="btn btn-outline-secondary" href="{{ url_for('compras.credit_cards_list') }}">Cancelar</a>{{ form.submit(class='btn btn-primary') }}</div>
+  </form></div></div>
+</div></div>
+{% endblock %}

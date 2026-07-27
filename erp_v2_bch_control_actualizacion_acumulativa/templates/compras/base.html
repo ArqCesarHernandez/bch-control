@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Compras{% endblock %}
+
+{% block topbar_actions %}
+<div class="dropdown">
+    <button
+        class="btn btn-sm btn-outline-secondary notification-button dropdown-toggle"
+        type="button"
+        data-bs-toggle="dropdown"
+        aria-expanded="false"
+    >
+        <i class="bi bi-bell" aria-hidden="true"></i>
+        <span class="d-none d-sm-inline">Alertas</span>
+        {% if purchase_unread %}
+        <span class="badge rounded-pill text-bg-danger">{{ purchase_unread }}</span>
+        {% endif %}
+    </button>
+    <div class="dropdown-menu dropdown-menu-end notification-menu p-0">
+        <div class="notification-menu-title">Alertas de Compras</div>
+        {% for note in purchase_notifications %}
+        <form method="post" action="{{ url_for('compras.notification_read', notification_id=note.id) }}" class="border-bottom">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="dropdown-item text-wrap py-3">
+                <strong>{{ note.tipo|replace('_', ' ')|title }}</strong><br>
+                <span class="small text-secondary">{{ note.mensaje }}</span>
+            </button>
+        </form>
+        {% else %}
+        <div class="p-3 text-secondary small">Sin alertas nuevas.</div>
+        {% endfor %}
+        <a class="dropdown-item text-center py-2 fw-semibold" href="{{ url_for('compras.notifications_list') }}">Ver todas</a>
+    </div>
+</div>
+<span class="role-pill d-none d-md-inline-flex">
+    <i class="bi bi-person-check" aria-hidden="true"></i>
+    {{ current_user.rol_etiqueta }}
+</span>
+{% endblock %}
+
+{% block back_navigation %}
+<div class="content-back no-print">
+    <a class="btn btn-sm btn-outline-secondary" href="{{ purchase_back_url }}">
+        <i class="bi bi-arrow-left" aria-hidden="true"></i> {{ purchase_back_label }}
+    </a>
+</div>
+{% endblock %}

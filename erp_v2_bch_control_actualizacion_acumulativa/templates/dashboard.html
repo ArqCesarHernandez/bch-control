@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}Panel principal{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+    <div>
+        <p class="text-primary fw-semibold mb-1">Sesión activa</p>
+        <h1 class="h2 fw-bold mb-2">
+            Panel de {{ current_user.rol_etiqueta }}
+        </h1>
+        <p class="text-secondary mb-0">
+            Bienvenido, {{ current_user.nombre_completo }}.
+        </p>
+    </div>
+    <span class="badge rounded-pill text-bg-{{ 'primary' if current_user.es_admin else 'secondary' }} px-3 py-2">
+        {{ current_user.rol_etiqueta }}
+    </span>
+</div>
+
+<div class="row g-4">
+    <div class="col-12 col-lg-8">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body p-4 p-lg-5">
+                {% if current_user.es_admin %}
+                <h2 class="h4">Panel de administrador</h2>
+                <p class="text-secondary">
+                    Administra los centros operativos y las cuentas autorizadas para utilizar el ERP.
+                </p>
+
+                <div class="row g-3 mt-1">
+                    {% if current_user.tiene_permiso('centros_costo','ver') %}<div class="col-12 col-md-6">
+                        <div class="border rounded-3 p-4 h-100 bg-light">
+                            <h3 class="h5">Centros de costo</h3>
+                            <p class="text-secondary small">
+                                Registra obras y oficinas, edita sus datos y controla su estado.
+                            </p>
+                            <a href="{{ url_for('admin.centros_lista') }}" class="btn btn-primary">
+                                Administrar centros
+                            </a>
+                        </div>
+                    </div>{% endif %}
+                    {% if current_user.tiene_permiso('usuarios','ver') %}<div class="col-12 col-md-6">
+                        <div class="border rounded-3 p-4 h-100 bg-light">
+                            <h3 class="h5">Usuarios</h3>
+                            <p class="text-secondary small">
+                                Crea administradores, capturistas, supervisores, compradores o Costos.
+                            </p>
+                            <a href="{{ url_for('admin.usuarios_lista') }}" class="btn btn-primary">
+                                Administrar usuarios
+                            </a>
+                        </div>
+                    </div>{% endif %}
+                    {% if current_user.tiene_permiso('nomina','ver') %}<div class="col-12">
+                        <div class="border rounded-3 p-4 h-100 bg-light">
+                            <h3 class="h5">Módulo de Nóminas</h3>
+                            <p class="text-secondary small">
+                                Nómina real por trabajador: asistencias, faltas, extras, Infonavit,
+                                préstamos, IMSS patronal, pago mixto, cierres y reportes.
+                            </p>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <a href="{{ url_for('nominas.dashboard') }}" class="btn btn-primary">
+                                    Abrir Nóminas
+                                </a>
+                                <a href="{{ url_for('nominas.projects_list') }}" class="btn btn-outline-primary">
+                                    Obras y partidas
+                                </a>
+                            </div>
+                        </div>
+                    </div>{% endif %}
+                    {% if current_user.tiene_permiso('compras','ver') or current_user.tiene_permiso('requisiciones','ver') or current_user.tiene_permiso('oc_operaciones','ver') %}<div class="col-12">
+                        <div class="border rounded-3 p-4 h-100 bg-light">
+                            <h3 class="h5">Módulo de Compras</h3>
+                            <p class="text-secondary small">
+                                Explosión de insumos por obra y partida, requisiciones,
+                                órdenes, recepciones y pagos dirigidos.
+                            </p>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <a href="{{ url_for('compras.dashboard') }}" class="btn btn-primary">
+                                    Abrir Compras
+                                </a>
+                                <a href="{{ url_for('compras.explosion_list') }}" class="btn btn-outline-primary">
+                                    Ver explosión
+                                </a>
+                            </div>
+                        </div>
+                    </div>{% endif %}
+                </div>
+                {% elif current_user.es_capturista %}
+                <h2 class="h4">Panel de capturista de nómina</h2>
+                <p class="text-secondary">
+                    Captura la nómina y consulta únicamente los registros de las obras asignadas.
+                </p>
+                {% if current_user.centro_costo %}
+                <div class="alert alert-light border">
+                    Centro asignado:
+                    <strong>{{ current_user.centro_costo.nombre }}</strong>
+                </div>
+                {% else %}
+                <div class="alert alert-warning">Aún no tienes un centro de costo asignado.</div>
+                {% endif %}
+                <div class="d-flex gap-2 flex-wrap">
+                    {% if current_user.tiene_permiso('nomina','ver') %}<a href="{{ url_for('nominas.dashboard') }}" class="btn btn-primary">Abrir Nóminas</a>{% endif %}
+                </div>
+                {% elif current_user.es_supervisor %}
+                <h2 class="h4">Panel de supervisor de obra</h2>
+                <p class="text-secondary">Crea tus requisiciones y confirma la recepción de materiales de las obras asignadas.</p>
+                {% if current_user.centro_costo %}<div class="alert alert-light border">Centro asignado: <strong>{{ current_user.centro_costo.nombre }}</strong></div>{% endif %}
+                <div class="d-flex gap-2 flex-wrap">{% if current_user.tiene_permiso('requisiciones','ver') or current_user.tiene_permiso('oc_operaciones','ver') %}<a href="{{ url_for('compras.dashboard') }}" class="btn btn-primary">Abrir Operaciones</a>{% endif %}{% if current_user.tiene_permiso('nomina','ver') %}<a href="{{ url_for('nominas.dashboard') }}" class="btn btn-outline-primary">Abrir Nómina</a>{% endif %}</div>
+                {% elif current_user.es_comprador %}
+                <h2 class="h4">Panel de Compras</h2>
+                <p class="text-secondary">Revisa requisiciones aprobadas, cotizaciones, proveedores y órdenes de compra.</p>
+                {% if current_user.tiene_permiso('compras','ver') %}<a href="{{ url_for('compras.dashboard') }}" class="btn btn-primary">Abrir Compras</a>{% endif %}
+                {% elif current_user.es_costos %}
+                <h2 class="h4">Panel de Costos</h2>
+                <p class="text-secondary">Consulta presupuestos, explosiones, autorizaciones y reportes.</p>
+                <div class="d-flex gap-2">{% if current_user.tiene_permiso('centros_costo','ver') %}<a href="{{ url_for('nominas.projects_list') }}" class="btn btn-primary">Presupuestos</a>{% endif %}{% if current_user.tiene_permiso('reportes','ver') %}<a href="{{ url_for('compras.reports_index') }}" class="btn btn-outline-primary">Reportes de Compras</a>{% endif %}</div>
+                {% else %}
+                <h2 class="h4">Panel de {{ current_user.rol_etiqueta }}</h2>
+                <p class="text-secondary">
+                    Gestiona autorizaciones, cotizaciones, órdenes, recepciones y vencimientos según tu rol.
+                </p>
+                <a href="{{ url_for('compras.dashboard') }}" class="btn btn-primary">Abrir Dashboard de Compras</a>
+                {% endif %}
+
+                <div class="alert alert-info mt-4 mb-0">
+                    El módulo integrado conserva las reglas y cálculos del sistema que funcionó en PythonAnywhere.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white fw-semibold">Información de la cuenta</div>
+            <div class="card-body">
+                <dl class="mb-0">
+                    <dt class="small text-secondary">Nombre</dt>
+                    <dd>{{ current_user.nombre_completo }}</dd>
+
+                    <dt class="small text-secondary">Correo</dt>
+                    <dd>{{ current_user.correo }}</dd>
+
+                    <dt class="small text-secondary">Rol</dt>
+                    <dd class="mb-0">
+                        {{ current_user.rol_etiqueta }}
+                    </dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

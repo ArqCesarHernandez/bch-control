@@ -1,0 +1,37 @@
+{% extends 'nominas/base.html' %}
+{% block title %}Iniciar sesión{% endblock %}
+{% block content %}
+<div class="login-shell">
+    <div class="card login-card">
+            <div class="card-body p-4 p-lg-5">
+                <div class="login-brand">
+                    <img class="login-logo" src="{{ url_for('static', filename='img/logo.png') }}" alt="Baja Custom Homes" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+                    <span class="login-brand-fallback" hidden><i class="bi bi-building" aria-hidden="true"></i></span>
+                    <h1>BCH Control</h1>
+                    <p>Nóminas semanales · Obra, oficina, préstamos y control de costos</p>
+                </div>
+                <form method="post" class="needs-validation" novalidate>
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label class="form-label required" for="username">Usuario</label>
+                        <input class="form-control form-control-lg" id="username" name="username" autocomplete="username" required autofocus>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label required" for="password">Contraseña</label>
+                        <input class="form-control form-control-lg" type="password" id="password" name="password" autocomplete="current-password" required>
+                    </div>
+                    <div class="form-check mb-4">
+                        <input class="form-check-input" type="checkbox" id="remember" name="remember">
+                        <label class="form-check-label" for="remember">Mantener sesión iniciada</label>
+                    </div>
+                    <button class="btn btn-accent btn-lg w-100" type="submit">Iniciar sesión</button>
+                </form>
+                {% if not current_user.is_authenticated %}
+                <p class="text-center small text-secondary mt-4 mb-0">
+                    Primera instalación: <a href="{{ url_for('admin.usuario_nuevo') }}">crear administrador inicial</a>
+                </p>
+                {% endif %}
+            </div>
+    </div>
+</div>
+{% endblock %}

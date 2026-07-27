@@ -1,0 +1,18 @@
+{% extends 'compras/base.html' %}
+{% block title %}{{ 'Editar tarjeta' if card else 'Nueva tarjeta' }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-lg-8">
+  <div class="page-header"><div><h1>{{ 'Editar tarjeta' if card else 'Nueva tarjeta de crédito' }}</h1><p>Guarda únicamente los últimos cuatro dígitos; nunca el número completo.</p></div><a class="btn btn-outline-secondary" href="{{ url_for('compras.credit_cards_list') }}">Volver</a></div>
+  <div class="card"><div class="card-body p-4"><form method="post" novalidate>{{ form.hidden_tag() }}
+    <div class="row g-3">
+      <div class="col-md-7"><label class="form-label required">Empresa pagadora</label><select class="form-select" name="empresa_id" required><option value="">Selecciona</option>{% for company in companies %}<option value="{{ company.id }}" {% if form.empresa_id.data == company.id %}selected{% endif %}>{{ company.codigo }} · {{ company.nombre }}</option>{% endfor %}</select>{% for error in form.empresa_id.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>
+      <div class="col-md-5">{{ form.numero_tarjeta.label(class='form-label required') }}{{ form.numero_tarjeta(class='form-control', placeholder='**** **** **** 1234') }}<div class="form-text">{{ form.numero_tarjeta.description }}</div>{% for error in form.numero_tarjeta.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>
+      <div class="col-md-6">{{ form.fecha_corte.label(class='form-label required') }}{{ form.fecha_corte(class='form-control') }}{% for error in form.fecha_corte.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>
+      <div class="col-md-6">{{ form.fecha_pago.label(class='form-label required') }}{{ form.fecha_pago(class='form-control') }}{% for error in form.fecha_pago.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>
+      <div class="col-md-6">{{ form.limite_credito.label(class='form-label required') }}{{ form.limite_credito(class='form-control', min='0', step='0.01') }}{% for error in form.limite_credito.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>
+      <div class="col-md-6">{{ form.saldo_actual.label(class='form-label required') }}{{ form.saldo_actual(class='form-control', min='0', step='0.01') }}{% for error in form.saldo_actual.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>
+    </div>
+    <div class="d-flex justify-content-end gap-2 mt-4"><a class="btn btn-outline-secondary" href="{{ url_for('compras.credit_cards_list') }}">Cancelar</a>{{ form.submit(class='btn btn-primary') }}</div>
+  </form></div></div>
+</div></div>
+{% endblock %}

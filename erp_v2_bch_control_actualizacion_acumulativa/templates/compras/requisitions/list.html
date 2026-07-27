@@ -1,0 +1,76 @@
+{% extends 'compras/base.html' %}
+{% block title %}Requisiciones{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>{{ 'Requisiciones de Operaciones' if operations_only else 'Requisiciones' }}</h1>
+    <p>Se pueden crear cualquier día. Una compra parcial mantiene la requisición abierta.</p>
+  </div>
+  {% if can_create %}
+  <a class="btn btn-primary" href="{{ url_for('compras.requisition_new') }}">Nueva requisición</a>
+  {% endif %}
+</div>
+
+<form class="card card-body mb-4 no-print">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-3"><label class="form-label">Obra</label><select class="form-select" name="project_id"><option value="">Todas</option>{% for project in projects %}<option value="{{ project.id }}" {% if selected_project_id == project.id %}selected{% endif %}>{{ project.codigo }} · {{ project.nombre }}</option>{% endfor %}</select></div>
+    <div class="col-md-3"><label class="form-label">Solicitante</label><select class="form-select" name="requested_by_id"><option value="">Todos</option>{% for user in requesters %}<option value="{{ user.id }}" {% if selected_requester_id == user.id %}selected{% endif %}>{{ user.nombre_completo }}</option>{% endfor %}</select></div>
+    {% if visible_types|length > 1 %}<div class="col-md-2"><label class="form-label">Tipo</label><select class="form-select" name="tipo_requisicion"><option value="">Todos</option><option value="OPERACIONES" {% if selected_type == 'OPERACIONES' %}selected{% endif %}>Operaciones</option><option value="COMPRAS" {% if selected_type == 'COMPRAS' %}selected{% endif %}>Compras</option></select></div>{% endif %}
+    <div class="{{ 'col-md-2' if visible_types|length > 1 else 'col-md-4' }}">
+      <label class="form-label">Estado</label>
+      <select class="form-select" name="estado">
+        <option value="">Todos</option>
+        {% for option in ['BORRADOR','PENDIENTE_AUTORIZACION','APROBADA','PARCIAL','CERRADA','VENCIDA','RECHAZADA','CANCELADA'] %}
+        <option value="{{ option }}" {% if state == option %}selected{% endif %}>{{ option|replace('_',' ')|title }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2"><button class="btn btn-outline-primary w-100">Filtrar</button></div>
+    <div class="col-12 text-end"><a href="{{ url_for('compras.requisitions_list') }}" class="btn btn-sm btn-outline-secondary">Limpiar filtros</a></div>
+  </div>
+</form>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr>
+          <th>Folio / tipo</th><th>Obra</th><th>Solicitud / requerida</th><th>Solicitante</th>
+          <th class="text-end">Solicitado</th><th class="text-end">Aprobado</th>
+          <th style="min-width:280px">Avance de compra por material</th><th>Estado</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for req in requisitions %}
+        <tr>
+          <td><strong>{{ req.folio }}</strong><br><span class="badge {{ 'text-bg-info' if req.tipo_requisicion == 'OPERACIONES' else 'text-bg-primary' }}">{{ req.tipo_requisicion|title }}</span><br><small>Avance total {{ '%.1f'|format(req.porcentaje_compra) }}%</small></td>
+          <td>{{ req.project.codigo }}<br><small>{{ req.project.nombre }}</small></td>
+          <td>{{ req.fecha_solicitud|date_es }}<br><strong>{{ req.fecha_requerida|date_es }}</strong></td>
+          <td>{{ req.requested_by.nombre_completo }}</td>
+          <td class="text-end">{{ req.total_solicitado|currency }}</td>
+          <td class="text-end">{{ req.total_aprobado|currency }}</td>
+          <td>
+            {% for line in req.lines %}
+            <div class="mb-2">
+              <div class="d-flex justify-content-between gap-2 small">
+                <span><strong>{{ line.explosion_item.supply_item.clave }}</strong> · {{ line.explosion_item.supply_item.descripcion }}</span>
+                <span class="text-nowrap">{{ '%.1f'|format(line.porcentaje_compra) }}%</span>
+              </div>
+              <div class="progress" style="height:8px" role="progressbar" aria-label="Avance de {{ line.explosion_item.supply_item.clave }}" aria-valuenow="{{ line.porcentaje_compra }}" aria-valuemin="0" aria-valuemax="100">
+                <div class="progress-bar {% if line.porcentaje_compra >= 100 %}bg-success{% else %}bg-primary{% endif %}" style="width:{{ '%.1f'|format(line.porcentaje_compra) }}%"></div>
+              </div>
+              <small class="text-secondary">{{ '%.4f'|format(line.cantidad_ordenada) }} de {{ '%.4f'|format(line.cantidad_solicitada) }} {{ line.explosion_item.supply_item.unidad }}</small>
+            </div>
+            {% else %}<span class="text-secondary">Sin materiales</span>{% endfor %}
+          </td>
+          <td><span class="badge status-{{ req.estado }}">{{ req.estado }}</span></td>
+          <td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('compras.requisition_detail', requisition_id=req.id) }}">Abrir</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9" class="text-center text-secondary py-5">No hay requisiciones con estos filtros.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
