@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Iniciar sesión{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+
+{% block content %}
+<div class="login-shell">
+    <div class="card login-card">
+        <div class="card-body">
+            <div class="login-brand">
+                <img
+                    class="login-logo"
+                    src="{{ url_for('static', filename='img/logo.png') }}"
+                    alt="Baja Custom Homes"
+                    onerror="this.hidden=true; this.nextElementSibling.hidden=false;"
+                >
+                <span class="login-brand-fallback" hidden>
+                    <i class="bi bi-building" aria-hidden="true"></i>
+                </span>
+                <h1>BCH Control</h1>
+                <p>Sistema de gestión de construcción</p>
+            </div>
+
+            <div class="mb-4 text-center">
+                <h2 class="h5 fw-bold mb-1">Bienvenido</h2>
+                <p class="text-secondary small mb-0">Ingresa con el correo asignado por Administración.</p>
+            </div>
+
+            <form method="post" novalidate>
+                {{ form.hidden_tag() }}
+
+                <div class="mb-3">
+                    {{ form.correo.label(class="form-label") }}
+                    {{ form.correo(
+                        class="form-control" + (" is-invalid" if form.correo.errors else ""),
+                        autocomplete="email",
+                        inputmode="email",
+                        placeholder="nombre@empresa.com",
+                        autofocus=true
+                    ) }}
+                    {% for error in form.correo.errors %}
+                    <div class="invalid-feedback">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="mb-4">
+                    {{ form.contrasena.label(class="form-label") }}
+                    {{ form.contrasena(
+                        class="form-control" + (" is-invalid" if form.contrasena.errors else ""),
+                        autocomplete="current-password",
+                        placeholder="Tu contraseña"
+                    ) }}
+                    {% for error in form.contrasena.errors %}
+                    <div class="invalid-feedback">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                {{ form.submit(class="btn btn-accent btn-lg w-100", value="Iniciar sesión") }}
+            </form>
+
+            {% if allow_initial_registration %}
+            <div class="initial-admin-link">
+                Esta instalación todavía no tiene usuarios.<br>
+                <a href="{{ url_for('auth.register') }}">Crear administrador inicial</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
